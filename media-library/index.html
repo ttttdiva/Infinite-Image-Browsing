@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="iib-base" content="__IIB_BASE__"><title>画像ライブラリ</title>
+<link rel="stylesheet" href="__IIB_BASE__/library-ui/library.css">
+</head>
+<body>
+<div id="library">
+  <header class="toolbar">
+    <button id="toggle-folders" class="icon-button" aria-label="フォルダパネル" aria-expanded="true" title="フォルダパネルを開閉"></button>
+    <form id="search-form" class="search-box" role="search"><span id="search-icon" aria-hidden="true"></span><input id="search" type="search" placeholder="プロンプト・モデル・LoRA・タグを検索" aria-label="画像を検索" autocomplete="off"></form>
+    <button id="filter-button" class="control"><span id="filter-icon" aria-hidden="true"></span>フィルター<span id="filter-count" hidden></span></button>
+    <div class="toolbar-spacer"></div>
+    <span id="count" class="quiet" role="status"></span>
+    <span class="toolbar-break" aria-hidden="true"></span>
+    <label id="sort-field-control" class="sort-control" title="並び替え項目"><span>並び替え項目</span><select id="sort-field" aria-label="並び替え項目"><option value="mtime">更新日時</option><option value="name">名前</option></select></label>
+    <label id="sort-direction-control" class="sort-control" title="昇順／降順"><span>昇順／降順</span><select id="sort-direction" aria-label="昇順／降順"><option value="desc">降順</option><option value="asc">昇順</option></select></label>
+    <label class="size-control" title="画像の表示サイズ"><span id="size-icon" aria-hidden="true"></span><input id="image-size" aria-label="画像の表示サイズ" type="range" min="180" max="520" step="20" value="320"></label>
+    <button id="refresh" class="icon-button" aria-label="画像と索引を更新" title="画像と索引を更新"></button>
+    <button id="tools-button" class="control" aria-haspopup="menu" aria-expanded="false">管理</button>
+  </header>
+  <div id="folder-location" class="folder-location" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="selection-bar" hidden><span id="selection-count"></span><button id="selection-tag">タグを付ける</button><button id="selection-clear">選択解除</button></div>
+  <div class="workspace">
+    <aside id="folders" class="sidebar" aria-label="フォルダとタグ">
+      <div class="sidebar-heading bookmark-heading"><strong>ブックマーク</strong></div>
+      <nav id="folder-bookmarks" aria-label="フォルダブックマーク"></nav>
+      <div class="sidebar-heading"><strong>フォルダ</strong><button id="add-folder" class="icon-button" aria-label="参照フォルダを追加" title="参照フォルダを追加">＋</button></div>
+      <button id="all-media" class="folder-item active">すべての画像・動画</button>
+      <nav id="folder-list" aria-label="参照フォルダ"></nav>
+      <div class="sidebar-heading tag-heading"><strong>タグ</strong></div>
+      <div id="sidebar-tags"></div>
+      <p class="sidebar-help">Ctrl / ⌘ ＋クリックで複数選択</p>
+    </aside>
+    <main id="gallery-scroll" class="gallery-scroll" tabindex="0" aria-label="画像・動画一覧">
+      <div id="gallery-canvas" role="list"></div>
+      <div id="empty" hidden></div>
+      <button id="load-more" hidden>続きを表示</button>
+    </main>
+    <aside id="inspector" class="inspector" aria-label="画像の詳細" hidden>
+      <header class="inspector-header"><span>詳細</span><button id="close-inspector" class="icon-button" aria-label="詳細を閉じる" title="詳細を閉じる">×</button></header>
+      <div id="inspector-content"></div>
+    </aside>
+  </div>
+  <div id="index-status" hidden role="status"></div>
+</div>
+<div id="tools-menu" class="floating-menu" role="menu" hidden></div>
+<div id="folder-context-menu" class="floating-menu folder-context-menu" role="menu" hidden></div>
+<dialog id="filter-dialog"><form id="filters"><header class="dialog-header"><h2>フィルター</h2><button type="button" data-close="filter-dialog" aria-label="閉じる">×</button></header>
+  <div class="dialog-body">
+    <label>フォルダ<select id="filter-folder" name="folder"><option value="">すべて</option></select></label>
+    <label>種類<select name="kind"><option value="all">画像・動画</option><option value="image">画像</option><option value="video">動画</option></select></label>
+    <label>生成元<select id="filter-source" name="source"><option value="">すべて</option></select></label>
+    <label>モデル<input name="model" list="model-options" placeholder="モデル名（部分一致）" autocomplete="off"></label><datalist id="model-options"></datalist>
+    <label>LoRA<input name="lora" list="lora-options" placeholder="LoRA名（部分一致）" autocomplete="off"></label><datalist id="lora-options"></datalist>
+    <fieldset><legend>タグ（すべてに一致）</legend><div id="filter-tags"></div></fieldset>
+  </div><footer class="dialog-footer"><button type="button" id="reset-filters">解除</button><button type="submit" class="primary">適用</button></footer>
+</form></dialog>
+<dialog id="folder-dialog"><form id="folder-form"><header class="dialog-header"><h2>参照フォルダを追加</h2><button type="button" data-close="folder-dialog" aria-label="閉じる">×</button></header><div class="dialog-body"><label>このPCのフォルダ<input id="folder-path" required placeholder="D:\AI\generated" autocomplete="off"></label><p class="quiet">サブフォルダも対象。元ファイルは移動・変更しません。</p><p id="folder-error" class="error" role="alert"></p></div><footer class="dialog-footer"><button type="button" data-close="folder-dialog">キャンセル</button><button type="submit" class="primary">追加</button></footer></form></dialog>
+<dialog id="tag-dialog"><form id="tag-form"><header class="dialog-header"><h2>タグ編集</h2><button type="button" data-close="tag-dialog" aria-label="閉じる">×</button></header><div class="dialog-body">
+  <p id="tag-edit-summary" class="quiet"></p>
+  <div id="tag-edit-list" class="tag-edit-list"></div>
+  <label>新しいタグを追加<input id="batch-tag-name" maxlength="128" list="custom-tag-options" autocomplete="off" placeholder="任意"></label>
+</div><footer class="dialog-footer"><button type="button" data-close="tag-dialog">キャンセル</button><button type="submit" class="primary">適用</button></footer></form></dialog>
+<datalist id="custom-tag-options"></datalist>
+<div id="viewer" hidden role="dialog" aria-modal="true" aria-label="画像ビューア">
+  <div class="viewer-shell">
+    <aside id="viewer-left" class="viewer-panel viewer-panel-left" aria-label="画像情報"></aside>
+    <section class="viewer-stage">
+      <button id="close-viewer" class="viewer-close" aria-label="プレビューを閉じる">×</button>
+      <button id="viewer-fullscreen" class="viewer-fullscreen" aria-label="全画面表示" title="全画面表示 (F)">⛶</button>
+      <button id="previous-image" class="viewer-previous" aria-label="前の画像">‹</button>
+      <div id="viewer-content"></div>
+      <button id="next-image" class="viewer-next" aria-label="次の画像">›</button>
+    </section>
+    <aside id="viewer-right" class="viewer-panel viewer-panel-right" aria-label="生成情報"></aside>
+  </div>
+</div>
+<div id="toast" hidden role="status"></div>
+<script type="module" src="__IIB_BASE__/library-ui/library.js"></script>
+</body></html>
